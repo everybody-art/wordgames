@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      color: #aaa;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+    button {
+      background: #e94560;
+      color: white;
+      border: none;
+      padding: 1rem 2.5rem;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #c73650;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Word Games</h1>
+    <p>One player writes a question, the other writes an answer. Neither knows what the other wrote!</p>
+    <button id="create">Create Game</button>
+  </div>
+  <script>
+    const adjectives = [
+      "quick","lazy","happy","sad","brave","calm","eager","fierce",
+      "gentle","jolly","kind","lively","merry","noble","proud",
+      "silly","witty","bold","clever","daring"
+    ];
+    const nouns = [
+      "fox","bear","wolf","hawk","deer","owl","lion","tiger",
+      "whale","eagle","otter","panda","raven","shark","snake",
+      "falcon","badger","crane","moose","bison"
+    ];
+    document.getElementById("create").addEventListener("click", () => {
+      const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+      const noun = nouns[Math.floor(Math.random() * nouns.length)];
+      const num = Math.floor(Math.random() * 1000);
+      window.location.href = `/game/${adj}-${noun}-${num}`;
+    });
+  </script>
+</body>
+</html>

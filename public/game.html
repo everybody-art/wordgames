@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      background: #1a1a2e;
+      color: #eee;
+      padding: 2rem;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .game-id {
+      font-size: 1.2rem;
+      color: #aaa;
+    }
+    .copy-btn {
+      background: #16213e;
+      color: #aaa;
+      border: 1px solid #333;
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .copy-btn:hover { background: #1a2a4a; }
+    .status {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      font-size: 1rem;
+      color: #aaa;
+    }
+    .role { color: #e94560; font-weight: bold; }
+    .game-area {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      background: #16213e;
+      color: #eee;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 1rem;
+      resize: vertical;
+      font-family: inherit;
+    }
+    textarea:focus { outline: none; border-color: #e94560; }
+    .submit-btn {
+      background: #e94560;
+      color: white;
+      border: none;
+      padding: 0.8rem 2rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: background 0.2s;
+    }
+    .submit-btn:hover { background: #c73650; }
+    .submit-btn:disabled { background: #555; cursor: not-allowed; }
+    .waiting {
+      color: #aaa;
+      font-style: italic;
+      margin-top: 1rem;
+    }
+    .reveal {
+      margin-top: 2rem;
+      display: none;
+    }
+    .reveal h2 {
+      margin-bottom: 1rem;
+      color: #e94560;
+    }
+    .reveal-card {
+      background: #16213e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .reveal-card .label {
+      font-size: 0.85rem;
+      color: #e94560;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .reveal-card .content {
+      font-size: 1.1rem;
+      white-space: pre-wrap;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="game-id" id="gameId"></span>
+    <button class="copy-btn" id="copyBtn">Copy Link</button>
+  </div>
+  <div class="status">
+    <span id="playerCount">Players: 0/2</span>
+    <span>Role: <span class="role" id="role">...</span></span>
+  </div>
+  <div class="game-area">
+    <div id="inputArea" class="hidden">
+      <label id="prompt"></label>
+      <textarea id="textInput" placeholder="Type here..."></textarea>
+      <button class="submit-btn" id="submitBtn">Submit</button>
+      <div class="waiting hidden" id="waitingMsg">Waiting for the other player...</div>
+    </div>
+    <div id="waitingForPlayers">
+      <p class="waiting">Waiting for another player to join...</p>
+    </div>
+    <div class="reveal" id="revealArea">
+      <h2>The Results!</h2>
+      <div class="reveal-card">
+        <div class="label">Question</div>
+        <div class="content" id="revealQuestion"></div>
+      </div>
+      <div class="reveal-card">
+        <div class="label">Answer</div>
+        <div class="content" id="revealAnswer"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const gameId = window.location.pathname.split("/game/")[1];
+    document.getElementById("gameId").textContent = gameId;
+
+    document.getElementById("copyBtn").addEventListener("click", () => {
+      navigator.clipboard.writeText(window.location.href);
+      document.getElementById("copyBtn").textContent = "Copied!";
+      setTimeout(() => document.getElementById("copyBtn").textContent = "Copy Link", 2000);
+    });
+
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${proto}//${location.host}/ws/${gameId}`);
+
+    let myRole = null;
+    let submitted = false;
+
+    ws.addEventListener("message", (e) => {
+      const msg = JSON.parse(e.data);
+
+      switch (msg.type) {
+        case "joined":
+          myRole = msg.role;
+          document.getElementById("role").textContent = msg.role;
+          document.getElementById("prompt").textContent =
+            msg.role === "question" ? "Write a question:" : "Write an answer:";
+          document.getElementById("textInput").placeholder =
+            msg.role === "question" ? "e.g. Why do birds sing?" : "e.g. Because the toaster said so.";
+          updateState(msg.playerCount, msg.gameState);
+          break;
+
+        case "state":
+          updateState(msg.playerCount, msg.gameState);
+          break;
+
+        case "submitted":
+          submitted = true;
+          document.getElementById("submitBtn").disabled = true;
+          document.getElementById("textInput").disabled = true;
+          document.getElementById("waitingMsg").classList.remove("hidden");
+          break;
+
+        case "reveal":
+          document.getElementById("inputArea").classList.add("hidden");
+          document.getElementById("waitingForPlayers").classList.add("hidden");
+          document.getElementById("revealArea").style.display = "block";
+          document.getElementById("revealQuestion").textContent = msg.question;
+          document.getElementById("revealAnswer").textContent = msg.answer;
+          break;
+      }
+    });
+
+    function updateState(playerCount, gameState) {
+      document.getElementById("playerCount").textContent = `Players: ${playerCount}/2`;
+      if (gameState === "playing" && !submitted) {
+        document.getElementById("inputArea").classList.remove("hidden");
+        document.getElementById("waitingForPlayers").classList.add("hidden");
+      } else if (gameState === "waiting") {
+        document.getElementById("inputArea").classList.add("hidden");
+        document.getElementById("waitingForPlayers").classList.remove("hidden");
+      }
+    }
+
+    document.getElementById("submitBtn").addEventListener("click", () => {
+      const content = document.getElementById("textInput").value.trim();
+      if (!content) return;
+      ws.send(JSON.stringify({ type: "submit", content }));
+    });
+  </script>
+</body>
+</html>
