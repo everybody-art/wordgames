@@ -3,7 +3,7 @@ main = "src/index.js"
 compatibility_date = "2024-12-01"
 
 routes = [
-  { pattern = "wordgames.nibblesnbits.net/*", zone_name = "nibblesnbits.net" }
+  { pattern = "wordgames.nibblesnbits.net", custom_domain = true }
 ]
 
 [assets]
